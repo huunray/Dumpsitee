@@ -1,0 +1,6 @@
+{
+  "name": "Dumpsite Admin Portal",
+  "description": "A highly minimal, robust admin portal for WasteCycle, offering dashboard overview, users & role management, complaint resolution, collection monitoring, financial tracking, and bulk notifications system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
