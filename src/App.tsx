@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   initialUsers, 
   initialComplaints, 
@@ -27,9 +27,35 @@ import CollectionMonitoring from './components/CollectionMonitoring';
 import FinancialTracking from './components/FinancialTracking';
 import NotificationSystem from './components/NotificationSystem';
 
+// Routing Mappings
+const tabToPathMap: Record<string, string> = {
+  dashboard: '/dashboard',
+  users: '/users',
+  complaints: '/complaints',
+  collections: '/collections',
+  finances: '/finances',
+  notifications: '/notifications'
+};
+
+const pathToTabMap: Record<string, string> = {
+  '/dashboard': 'dashboard',
+  '/users': 'users',
+  '/complaints': 'complaints',
+  '/collections': 'collections',
+  '/finances': 'finances',
+  '/notifications': 'notifications'
+};
+
 export default function App() {
-  // Session Access Controls
-  const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null);
+  // Session Access Controls - load from localStorage/sessionStorage to preserve state on reload
+  const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(() => {
+    try {
+      const stored = sessionStorage.getItem('dumpsite_admin_session');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   // Unified Reactive Central states
@@ -41,6 +67,50 @@ export default function App() {
   const [notifHistory, setNotifHistory] = useState<NotificationHistoryItem[]>(initialNotificationsHistory);
   const [disruptions, setDisruptions] = useState<ServiceDisruption[]>(initialDisruptions);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
+
+  // Sync browser pathname with active tab or login states
+  useEffect(() => {
+    const handleLocationSync = () => {
+      const currentPath = window.location.pathname;
+      const isLoggedIn = !!sessionStorage.getItem('dumpsite_admin_session');
+
+      if (!isLoggedIn) {
+        // Force login page route if not entered
+        if (currentPath !== '/login' && currentPath !== '/login-page') {
+          window.history.replaceState(null, '', '/login-page');
+        }
+      } else {
+        const mappedTab = pathToTabMap[currentPath];
+        if (mappedTab) {
+          setActiveTab(mappedTab);
+        } else if (currentPath === '/login' || currentPath === '/login-page' || currentPath === '/') {
+          window.history.replaceState(null, '', '/dashboard');
+          setActiveTab('dashboard');
+        } else {
+          // default route fallback
+          window.history.replaceState(null, '', '/dashboard');
+          setActiveTab('dashboard');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handleLocationSync);
+    // Initial sync trigger
+    handleLocationSync();
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationSync);
+    };
+  }, [currentAdmin]);
+
+  // Unified browser address-matching tab change trigger
+  const handleTabChange = (tab: string) => {
+    const path = tabToPathMap[tab] || '/dashboard';
+    if (window.location.pathname !== path) {
+      window.history.pushState(null, '', path);
+    }
+    setActiveTab(tab);
+  };
 
   // Helper routine to append security action logs dynamically
   const handleAddAudit = (actionText: string) => {
@@ -79,6 +149,7 @@ export default function App() {
     };
 
     setCurrentAdmin(updatedAdmin);
+    sessionStorage.setItem('dumpsite_admin_session', JSON.stringify(updatedAdmin));
     
     // Commit to logs
     const newLog: AuditLog = {
@@ -92,12 +163,16 @@ export default function App() {
   };
 
   const handleLogin = (admin: AdminUser) => {
+    sessionStorage.setItem('dumpsite_admin_session', JSON.stringify(admin));
     setCurrentAdmin(admin);
+    window.history.replaceState(null, '', '/dashboard');
     setActiveTab('dashboard');
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem('dumpsite_admin_session');
     setCurrentAdmin(null);
+    window.history.replaceState(null, '', '/login-page');
   };
 
   // Determine missed collections count (for circular red sidebar badge layout)
@@ -113,7 +188,7 @@ export default function App() {
       {/* Navigation Rail - fixed column */}
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={handleTabChange} 
         missedCollectionsCount={missedCount} 
         currentRole={currentAdmin.role}
       />
@@ -139,7 +214,7 @@ export default function App() {
                 collections={collections} 
                 complaints={complaints}
                 missedCount={missedCount}
-                setActiveTab={setActiveTab}
+                setActiveTab={handleTabChange}
               />
             )}
 
