@@ -1,0 +1,17 @@
+{
+  "short_name": "dumpsite",
+  "name": "Dumpsite Admin Portal",
+  "description": "Unified recycling & logistics hub. Enterprise administrative operations for autonomous waste cycle management, smart material recovery, and compliance tracking.",
+  "start_url": "/",
+  "background_color": "#fafbfc",
+  "theme_color": "#059669",
+  "display": "standalone",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
